@@ -68,6 +68,22 @@ func (a *Act) AddParagraph(id string, content string) error {
 	return nil
 }
 
+// ReplaceParagraphContent replaces the content of the paragraph with the given ID.
+// Returns an error if the Act is not in Draft or the paragraph is not found.
+// Paragraph identity and order remain unchanged.
+func (a *Act) ReplaceParagraphContent(paragraphID string, newContent string) error {
+	if a.status != StatusDraft {
+		return errors.New("paragraph content can only be replaced in Draft status")
+	}
+	for i := range a.paragraphs {
+		if a.paragraphs[i].ID == paragraphID {
+			a.paragraphs[i].Content = newContent
+			return nil
+		}
+	}
+	return errors.New("paragraph not found")
+}
+
 // StartVoting transitions the Act from Draft to Voting status.
 // Returns an error if the Act is not in Draft status.
 func (a *Act) StartVoting() error {
