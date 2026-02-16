@@ -285,3 +285,70 @@ func TestNewDraftAct_ExposesIdentityViaID(t *testing.T) {
 		t.Errorf("ID() = %q, want id-123", got)
 	}
 }
+
+// A newly created Act has version 1.
+func TestNewDraftAct_HasVersionOne(t *testing.T) {
+	a := NewDraftAct("id")
+
+	if got := a.Version(); got != 0 {
+		t.Errorf("Version() = %d, want 0", got)
+	}
+}
+
+// Accept() increments the version number.
+func TestActInVoting_Accept_IncrementsVersion(t *testing.T) {
+	a := NewDraftAct("act-ver")
+	if err := a.StartVoting(); err != nil {
+		t.Fatalf("StartVoting: %v", err)
+	}
+	if a.Version() != 0 {
+		t.Fatalf("before Accept Version() = %d, want 0", a.Version())
+	}
+
+	if err := a.Accept(); err != nil {
+		t.Fatalf("Accept: %v", err)
+	}
+
+	if got := a.Version(); got != 1 {
+		t.Errorf("after Accept Version() = %d, want 1", got)
+	}
+}
+
+// Accept() from wrong status does not increment version.
+func TestActInDraft_Accept_DoesNotIncrementVersion(t *testing.T) {
+	a := NewDraftAct("act-noinc")
+	if a.Version() != 0 {
+		t.Fatalf("Version() = %d, want 0", a.Version())
+	}
+
+	err := a.Accept()
+
+	if err == nil {
+		t.Error("Accept from Draft: want error, got nil")
+	}
+	if got := a.Version(); got != 0 {
+		t.Errorf("Version() = %d, want 0 unchanged", got)
+	}
+}
+
+// Version is unchanged by Publish and remains immutable once Published.
+func TestAct_Publish_DoesNotChangeVersion(t *testing.T) {
+	a := NewDraftAct("act-pubver")
+	if err := a.StartVoting(); err != nil {
+		t.Fatalf("StartVoting: %v", err)
+	}
+	if err := a.Accept(); err != nil {
+		t.Fatalf("Accept: %v", err)
+	}
+	if a.Version() != 1 {
+		t.Fatalf("after Accept Version() = %d, want 1", a.Version())
+	}
+
+	if err := a.Publish(); err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+
+	if got := a.Version(); got != 1 {
+		t.Errorf("after Publish Version() = %d, want 1 unchanged", got)
+	}
+}
