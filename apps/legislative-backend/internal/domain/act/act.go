@@ -12,11 +12,17 @@ const (
 	StatusPublished Status = "Published"
 )
 
+// Paragraph is a single paragraph with a unique identifier and content.
+type Paragraph struct {
+	ID      string
+	Content string
+}
+
 // Act is a legislative act with identity and internal paragraph storage.
 type Act struct {
 	id         string
 	status     Status
-	paragraphs []string
+	paragraphs []Paragraph
 }
 
 // NewDraftAct creates an Act with the given identity in Draft status.
@@ -42,9 +48,24 @@ func (a *Act) ParagraphCount() int {
 	return len(a.paragraphs)
 }
 
-// AddParagraph appends a paragraph and stores it internally.
-func (a *Act) AddParagraph(text string) {
-	a.paragraphs = append(a.paragraphs, text)
+// Paragraphs returns a copy of the paragraphs in insertion order.
+func (a *Act) Paragraphs() []Paragraph {
+	if len(a.paragraphs) == 0 {
+		return nil
+	}
+	out := make([]Paragraph, len(a.paragraphs))
+	copy(out, a.paragraphs)
+	return out
+}
+
+// AddParagraph appends a paragraph with the given id and content and stores it internally.
+// Returns an error if the Act is not in Draft status.
+func (a *Act) AddParagraph(id string, content string) error {
+	if a.status != StatusDraft {
+		return errors.New("paragraphs can only be added in Draft status")
+	}
+	a.paragraphs = append(a.paragraphs, Paragraph{ID: id, Content: content})
+	return nil
 }
 
 // StartVoting transitions the Act from Draft to Voting status.

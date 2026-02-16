@@ -17,11 +17,80 @@ func TestActInDraft_AddParagraph_StoresItInternally(t *testing.T) {
 
 	// Adding paragraph must increase paragraph count
 	before := a.ParagraphCount()
-	a.AddParagraph("First paragraph text")
+	if err := a.AddParagraph("p0", "First paragraph text"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
 	after := a.ParagraphCount()
 
 	if after != before+1 {
 		t.Errorf("paragraph count = %d, want %d", after, before+1)
+	}
+}
+
+// A paragraph has a unique identifier and content; the Act stores it and exposes it via Paragraphs().
+func TestActInDraft_AddParagraph_StoresParagraphWithIdAndContent(t *testing.T) {
+	a := NewDraftAct("act-par")
+	if err := a.AddParagraph("p1", "First paragraph text"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
+
+	if a.ParagraphCount() != 1 {
+		t.Fatalf("ParagraphCount() = %d, want 1", a.ParagraphCount())
+	}
+	ps := a.Paragraphs()
+	if len(ps) != 1 {
+		t.Fatalf("Paragraphs() length = %d, want 1", len(ps))
+	}
+	if ps[0].ID != "p1" {
+		t.Errorf("Paragraphs()[0].ID = %q, want p1", ps[0].ID)
+	}
+	if ps[0].Content != "First paragraph text" {
+		t.Errorf("Paragraphs()[0].Content = %q, want First paragraph text", ps[0].Content)
+	}
+}
+
+// Paragraphs are in insertion order.
+func TestActInDraft_AddParagraph_ParagraphsAreOrdered(t *testing.T) {
+	a := NewDraftAct("act-order")
+	if err := a.AddParagraph("p1", "first"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
+	if err := a.AddParagraph("p2", "second"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
+	if err := a.AddParagraph("p3", "third"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
+
+	ps := a.Paragraphs()
+	if len(ps) != 3 {
+		t.Fatalf("Paragraphs() length = %d, want 3", len(ps))
+	}
+	if ps[0].ID != "p1" || ps[1].ID != "p2" || ps[2].ID != "p3" {
+		t.Errorf("order: got IDs %q, %q, %q; want p1, p2, p3", ps[0].ID, ps[1].ID, ps[2].ID)
+	}
+}
+
+// AddParagraph when not in Draft is rejected; count and status unchanged.
+func TestActInVoting_AddParagraph_ReturnsErrorAndCountUnchanged(t *testing.T) {
+	a := NewDraftAct("act-nodraft")
+	if err := a.StartVoting(); err != nil {
+		t.Fatalf("StartVoting: %v", err)
+	}
+	if a.Status() != StatusVoting {
+		t.Fatalf("act status = %v, want Voting", a.Status())
+	}
+
+	err := a.AddParagraph("p1", "content")
+
+	if err == nil {
+		t.Error("AddParagraph from Voting: want error, got nil")
+	}
+	if a.ParagraphCount() != 0 {
+		t.Errorf("ParagraphCount() = %d, want 0 unchanged", a.ParagraphCount())
+	}
+	if a.Status() != StatusVoting {
+		t.Errorf("status = %v, want Voting unchanged", a.Status())
 	}
 }
 
