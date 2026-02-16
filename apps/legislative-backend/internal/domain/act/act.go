@@ -1,11 +1,15 @@
 package act
 
+import "errors"
+
 // Status represents the lifecycle state of an Act.
 type Status string
 
 const (
-	StatusDraft  Status = "Draft"
-	StatusVoting Status = "Voting"
+	StatusDraft     Status = "Draft"
+	StatusVoting    Status = "Voting"
+	StatusAccepted  Status = "Accepted"
+	StatusPublished Status = "Published"
 )
 
 // Act is a legislative act with identity and internal paragraph storage.
@@ -21,6 +25,11 @@ func NewDraftAct(id string) *Act {
 		id:     id,
 		status: StatusDraft,
 	}
+}
+
+// ID returns the unique identifier of the Act.
+func (a *Act) ID() string {
+	return a.id
 }
 
 // Status returns the current status of the Act.
@@ -39,6 +48,31 @@ func (a *Act) AddParagraph(text string) {
 }
 
 // StartVoting transitions the Act from Draft to Voting status.
-func (a *Act) StartVoting() {
+// Returns an error if the Act is not in Draft status.
+func (a *Act) StartVoting() error {
+	if a.status != StatusDraft {
+		return errors.New("StartVoting only allowed from Draft")
+	}
 	a.status = StatusVoting
+	return nil
+}
+
+// Accept transitions the Act from Voting to Accepted status.
+// Returns an error if the Act is not in Voting status.
+func (a *Act) Accept() error {
+	if a.status != StatusVoting {
+		return errors.New("Accept only allowed from Voting")
+	}
+	a.status = StatusAccepted
+	return nil
+}
+
+// Publish transitions the Act from Accepted to Published status.
+// Returns an error if the Act is not in Accepted status.
+func (a *Act) Publish() error {
+	if a.status != StatusAccepted {
+		return errors.New("Publish only allowed from Accepted")
+	}
+	a.status = StatusPublished
+	return nil
 }
