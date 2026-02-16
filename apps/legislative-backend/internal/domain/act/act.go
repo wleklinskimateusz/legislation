@@ -22,14 +22,16 @@ type Paragraph struct {
 type Act struct {
 	id         string
 	status     Status
+	version    int
 	paragraphs []Paragraph
 }
 
 // NewDraftAct creates an Act with the given identity in Draft status.
 func NewDraftAct(id string) *Act {
 	return &Act{
-		id:     id,
-		status: StatusDraft,
+		id:      id,
+		status:  StatusDraft,
+		version: 0,
 	}
 }
 
@@ -41,6 +43,11 @@ func (a *Act) ID() string {
 // Status returns the current status of the Act.
 func (a *Act) Status() Status {
 	return a.status
+}
+
+// Version returns the version number of the Act.
+func (a *Act) Version() int {
+	return a.version
 }
 
 // ParagraphCount returns the number of paragraphs stored in the Act.
@@ -96,11 +103,13 @@ func (a *Act) StartVoting() error {
 
 // Accept transitions the Act from Voting to Accepted status.
 // Returns an error if the Act is not in Voting status.
+// On success, increments the version number.
 func (a *Act) Accept() error {
 	if a.status != StatusVoting {
 		return errors.New("Accept only allowed from Voting")
 	}
 	a.status = StatusAccepted
+	a.version++
 	return nil
 }
 
