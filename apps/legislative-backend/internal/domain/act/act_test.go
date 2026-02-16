@@ -94,6 +94,75 @@ func TestActInVoting_AddParagraph_ReturnsErrorAndCountUnchanged(t *testing.T) {
 	}
 }
 
+// In Draft, paragraph content can be replaced by ID; ID and order stay the same.
+func TestActInDraft_ReplaceParagraphContent_UpdatesContentKeepsIdAndOrder(t *testing.T) {
+	a := NewDraftAct("act-replace")
+	if err := a.AddParagraph("p1", "old"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
+	if err := a.AddParagraph("p2", "second"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
+
+	err := a.ReplaceParagraphContent("p1", "new")
+
+	if err != nil {
+		t.Fatalf("ReplaceParagraphContent: %v", err)
+	}
+	ps := a.Paragraphs()
+	if len(ps) != 2 {
+		t.Fatalf("Paragraphs() length = %d, want 2", len(ps))
+	}
+	if ps[0].ID != "p1" || ps[0].Content != "new" {
+		t.Errorf("Paragraphs()[0] = %+v, want ID p1 Content new", ps[0])
+	}
+	if ps[1].ID != "p2" || ps[1].Content != "second" {
+		t.Errorf("Paragraphs()[1] = %+v, want ID p2 Content second unchanged", ps[1])
+	}
+}
+
+// ReplaceParagraphContent when not in Draft is rejected; content unchanged.
+func TestActInVoting_ReplaceParagraphContent_ReturnsErrorAndContentUnchanged(t *testing.T) {
+	a := NewDraftAct("act-replace-nodraft")
+	if err := a.AddParagraph("p1", "old"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
+	if err := a.StartVoting(); err != nil {
+		t.Fatalf("StartVoting: %v", err)
+	}
+	if a.Status() != StatusVoting {
+		t.Fatalf("act status = %v, want Voting", a.Status())
+	}
+
+	err := a.ReplaceParagraphContent("p1", "new")
+
+	if err == nil {
+		t.Error("ReplaceParagraphContent from Voting: want error, got nil")
+	}
+	ps := a.Paragraphs()
+	if len(ps) != 1 || ps[0].Content != "old" {
+		t.Errorf("content changed: Paragraphs()[0].Content = %q, want old", ps[0].Content)
+	}
+}
+
+// ReplaceParagraphContent for non-existent paragraph ID returns error; existing content unchanged.
+func TestActInDraft_ReplaceParagraphContent_NonExistentParagraphReturnsError(t *testing.T) {
+	a := NewDraftAct("act-replace-notfound")
+	if err := a.AddParagraph("p1", "old"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
+
+	err := a.ReplaceParagraphContent("p99", "x")
+
+	if err == nil {
+		t.Error("ReplaceParagraphContent for p99: want error, got nil")
+	}
+	ps := a.Paragraphs()
+	if len(ps) != 1 || ps[0].Content != "old" {
+		t.Errorf("content changed: Paragraphs()[0].Content = %q, want old", ps[0].Content)
+	}
+}
+
 // An Act in Draft status can transition to Voting status using StartVoting().
 func TestActInDraft_StartVoting_ChangesStatusToVoting(t *testing.T) {
 	a := NewDraftAct("act-002")
