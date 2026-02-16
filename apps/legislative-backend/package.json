@@ -3,6 +3,7 @@
   "scripts": {
     "dev": "go run main.go",
     "build": "go build -o dist/server",
-    "lint": "echo 'no lint yet'"
+    "lint": "echo 'no lint yet'",
+    "test": "go test ./..."
   }
 }

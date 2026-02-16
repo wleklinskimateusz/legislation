@@ -12,7 +12,7 @@ importers:
         specifier: ^2.8.9
         version: 2.8.9
 
-  apps/api: {}
+  apps/legislative-backend: {}
 
   apps/web:
     dependencies:
