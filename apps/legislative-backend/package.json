@@ -1,0 +1,8 @@
+{
+  "name": "legislative-backend",
+  "scripts": {
+    "dev": "go run main.go",
+    "build": "go build -o dist/server",
+    "lint": "echo 'no lint yet'"
+  }
+}
