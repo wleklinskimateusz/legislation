@@ -41,17 +41,20 @@ func TestNewVoteSession_StoresEligibleVotersSnapshotImmutable(t *testing.T) {
 	}
 }
 
-// VoteSession can be closed; status becomes Closed.
-func TestVoteSession_Close_SetsStatusClosed(t *testing.T) {
+// VoteSession can be closed with result; status becomes Closed.
+func TestVoteSession_CloseWithResult_SetsStatusClosed(t *testing.T) {
 	vs := NewVoteSession("act-3", nil)
 	if vs.Status() != StatusOpen {
 		t.Fatalf("Status() = %v, want Open", vs.Status())
 	}
 
-	vs.Close()
+	err := vs.CloseWithResult(SimpleMajorityPolicy{})
+	if err != nil {
+		t.Fatalf("CloseWithResult: %v", err)
+	}
 
 	if vs.Status() != StatusClosed {
-		t.Errorf("after Close Status() = %v, want Closed", vs.Status())
+		t.Errorf("after CloseWithResult Status() = %v, want Closed", vs.Status())
 	}
 }
 
@@ -100,10 +103,10 @@ func TestVoteSession_CastVote_NonEligibleReturnsError(t *testing.T) {
 	}
 }
 
-// Voting is only allowed while session is Open; after Close, CastVote returns error and Votes() stays empty.
+// Voting is only allowed while session is Open; after CloseWithResult, CastVote returns error and Votes() stays empty.
 func TestVoteSession_CastVote_ClosedSessionReturnsError(t *testing.T) {
 	vs := NewVoteSession("act-vote", []EligibleVoter{{ID: "m1", Name: "Alice"}})
-	vs.Close()
+	_ = vs.CloseWithResult(SimpleMajorityPolicy{})
 
 	err := vs.CastVote("m1", VoteYes)
 
@@ -221,7 +224,7 @@ func TestVoteSession_CloseWithResult_SetsClosedAndResult(t *testing.T) {
 // CloseWithResult when session already closed returns error.
 func TestVoteSession_CloseWithResult_WhenAlreadyClosedReturnsError(t *testing.T) {
 	vs := NewVoteSession("act-1", nil)
-	vs.Close()
+	_ = vs.CloseWithResult(SimpleMajorityPolicy{})
 
 	err := vs.CloseWithResult(SimpleMajorityPolicy{})
 

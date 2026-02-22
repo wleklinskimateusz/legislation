@@ -106,11 +106,6 @@ func (vs *VoteSession) EligibleVoters() []EligibleVoter {
 	return out
 }
 
-// Close sets the session status to Closed (no result stored; use CloseWithResult to compute outcome).
-func (vs *VoteSession) Close() {
-	vs.status = StatusClosed
-}
-
 // CloseWithResult closes the session and computes and stores the VotingResult using the given policy.
 // Returns error if the session is not Open.
 func (vs *VoteSession) CloseWithResult(policy OutcomePolicy) error {
