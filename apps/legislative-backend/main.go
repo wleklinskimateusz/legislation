@@ -2,17 +2,14 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net/http"
+	"os"
 )
 
 func main() {
-	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello from Go!")
-	})
 
-	err := http.ListenAndServe(":8080", nil)
-
-	log.Fatal(err)
-
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	fmt.Println("Listening on port", port)
 }

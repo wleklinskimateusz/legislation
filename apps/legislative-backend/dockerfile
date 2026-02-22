@@ -1,0 +1,39 @@
+# ---------- Build stage ----------
+FROM golang:1.22-alpine AS builder
+
+# Install git (needed for go modules sometimes)
+RUN apk add --no-cache git
+
+WORKDIR /app
+
+# Copy go mod files first (better layer caching)
+# COPY go.mod go.sum ./
+COPY go.mod ./
+RUN go mod download
+
+# Copy the rest of the source
+COPY . .
+
+# Build statically linked binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-w -s" -o app
+
+
+# ---------- Runtime stage ----------
+FROM alpine:3.19
+
+# Install ca-certificates (needed for HTTPS requests)
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/app .
+
+# Non-root user (security best practice)
+RUN adduser -D appuser
+USER appuser
+
+EXPOSE 8080
+
+CMD ["./app"]
