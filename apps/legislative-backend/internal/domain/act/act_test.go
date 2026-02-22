@@ -352,3 +352,96 @@ func TestAct_Publish_DoesNotChangeVersion(t *testing.T) {
 		t.Errorf("after Publish Version() = %d, want 1 unchanged", got)
 	}
 }
+
+// actInPublishedStatus creates an Act in Published status (Draft -> StartVoting -> Accept -> Publish).
+func actInPublishedStatus(t *testing.T, actID string) *Act {
+	t.Helper()
+	a := NewDraftAct(actID)
+	if err := a.StartVoting(); err != nil {
+		t.Fatalf("StartVoting: %v", err)
+	}
+	if err := a.Accept(); err != nil {
+		t.Fatalf("Accept: %v", err)
+	}
+	if err := a.Publish(); err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+	return a
+}
+
+// When Published, no paragraphs can be added.
+func TestActInPublished_AddParagraph_ReturnsErrorAndCountUnchanged(t *testing.T) {
+	a := actInPublishedStatus(t, "act-pub-add")
+	if a.Status() != StatusPublished {
+		t.Fatalf("act status = %v, want Published", a.Status())
+	}
+	before := a.ParagraphCount()
+
+	err := a.AddParagraph("p1", "content")
+
+	if err == nil {
+		t.Error("AddParagraph from Published: want error, got nil")
+	}
+	if a.ParagraphCount() != before {
+		t.Errorf("ParagraphCount() = %d, want %d unchanged", a.ParagraphCount(), before)
+	}
+}
+
+// When Published, no paragraph content can be replaced.
+func TestActInPublished_ReplaceParagraphContent_ReturnsErrorAndContentUnchanged(t *testing.T) {
+	a := NewDraftAct("act-pub-replace")
+	if err := a.AddParagraph("p1", "original"); err != nil {
+		t.Fatalf("AddParagraph: %v", err)
+	}
+	if err := a.StartVoting(); err != nil {
+		t.Fatalf("StartVoting: %v", err)
+	}
+	if err := a.Accept(); err != nil {
+		t.Fatalf("Accept: %v", err)
+	}
+	if err := a.Publish(); err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+	if a.Status() != StatusPublished {
+		t.Fatalf("act status = %v, want Published", a.Status())
+	}
+
+	err := a.ReplaceParagraphContent("p1", "new")
+
+	if err == nil {
+		t.Error("ReplaceParagraphContent from Published: want error, got nil")
+	}
+	ps := a.Paragraphs()
+	if len(ps) != 1 || ps[0].Content != "original" {
+		t.Errorf("content changed: Paragraphs()[0].Content = %q, want original", ps[0].Content)
+	}
+}
+
+// When Published, no lifecycle regression: StartVoting, Accept, and Publish all return error and status stays Published.
+func TestActInPublished_NoLifecycleRegression(t *testing.T) {
+	a := actInPublishedStatus(t, "act-pub-noregress")
+	if a.Status() != StatusPublished {
+		t.Fatalf("act status = %v, want Published", a.Status())
+	}
+
+	if err := a.StartVoting(); err == nil {
+		t.Error("StartVoting from Published: want error, got nil")
+	}
+	if a.Status() != StatusPublished {
+		t.Errorf("after StartVoting status = %v, want Published", a.Status())
+	}
+
+	if err := a.Accept(); err == nil {
+		t.Error("Accept from Published: want error, got nil")
+	}
+	if a.Status() != StatusPublished {
+		t.Errorf("after Accept status = %v, want Published", a.Status())
+	}
+
+	if err := a.Publish(); err == nil {
+		t.Error("Publish from Published: want error, got nil")
+	}
+	if a.Status() != StatusPublished {
+		t.Errorf("after Publish status = %v, want Published", a.Status())
+	}
+}
