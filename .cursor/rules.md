@@ -9,7 +9,7 @@ All code must follow:
 
 -   Clean Architecture
 -   Domain-first modeling
--   Strict Test-Driven Development (TDD)
+-   Strict Test-Driven Development (TDD) - first test, then code, then refactor
 -   Modular design
 -   Explicit boundaries
 -   OOP principles implemented idiomatically (interfaces + composition)
