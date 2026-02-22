@@ -3,6 +3,7 @@ package application
 import (
 	"errors"
 
+	"github.com/wleklinskimateusz/legislation/backend/internal/domain/act"
 	"github.com/wleklinskimateusz/legislation/backend/internal/domain/votesession"
 )
 
@@ -13,6 +14,7 @@ var ErrVoteSessionNotOpen = errors.New("vote session is not open")
 type CloseVoteSessionService struct {
 	SessionRepo votesession.VoteSessionRepository
 	Policy      votesession.OutcomePolicy
+	ActRepo     act.ActRepository
 }
 
 // CloseVoteSession loads the session for the act, closes it with the policy, saves, and returns the result.
@@ -34,5 +36,26 @@ func (s *CloseVoteSessionService) CloseVoteSession(actID string) (*votesession.V
 	if err := s.SessionRepo.Save(vs); err != nil {
 		return nil, err
 	}
-	return vs.Result(), nil
+	result := vs.Result()
+	if result != nil && result.Passed && s.ActRepo != nil {
+		if err := s.acceptActForPassedVote(actID); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+// acceptActForPassedVote loads the act, calls Accept(), and saves it. Call only when result.Passed and ActRepo is set.
+func (s *CloseVoteSessionService) acceptActForPassedVote(actID string) error {
+	a, err := s.ActRepo.GetByID(actID)
+	if err != nil {
+		return err
+	}
+	if a == nil {
+		return act.ErrActNotFound
+	}
+	if err := a.Accept(); err != nil {
+		return err
+	}
+	return s.ActRepo.Save(a)
 }
