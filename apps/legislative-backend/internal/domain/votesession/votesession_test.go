@@ -241,3 +241,53 @@ func TestVoteSession_Result_NilWhenOpen(t *testing.T) {
 		t.Errorf("Result() = %v, want nil when open", vs.Result())
 	}
 }
+
+// FinalVotes returns nil when session is Open.
+func TestVoteSession_FinalVotes_ReturnsNilWhenOpen(t *testing.T) {
+	vs := NewVoteSession("act-1", []EligibleVoter{{ID: "m1", Name: "A"}})
+	_ = vs.CastVote("m1", VoteYes)
+
+	if vs.FinalVotes() != nil {
+		t.Errorf("FinalVotes() = %v, want nil when open", vs.FinalVotes())
+	}
+}
+
+// After CloseWithResult, FinalVotes returns the per-member final votes (matches what was cast).
+func TestVoteSession_FinalVotes_AfterCloseReturnsCastVotes(t *testing.T) {
+	vs := NewVoteSession("act-1", []EligibleVoter{{ID: "m1", Name: "A"}, {ID: "m2", Name: "B"}, {ID: "m3", Name: "C"}})
+	_ = vs.CastVote("m1", VoteYes)
+	_ = vs.CastVote("m2", VoteNo)
+	_ = vs.CastVote("m3", VoteAbstain)
+
+	_ = vs.CloseWithResult(SimpleMajorityPolicy{})
+
+	fv := vs.FinalVotes()
+	if fv == nil {
+		t.Fatal("FinalVotes() = nil, want non-nil after close")
+	}
+	if fv["m1"] != VoteYes || fv["m2"] != VoteNo || fv["m3"] != VoteAbstain {
+		t.Errorf("FinalVotes() = %v, want m1=Yes m2=No m3=Abstain", fv)
+	}
+}
+
+// FinalVotes returns a copy; mutating it does not affect the session.
+func TestVoteSession_FinalVotes_ReturnsCopyImmutable(t *testing.T) {
+	vs := NewVoteSession("act-1", []EligibleVoter{{ID: "m1", Name: "A"}})
+	_ = vs.CastVote("m1", VoteYes)
+	_ = vs.CloseWithResult(SimpleMajorityPolicy{})
+
+	fv := vs.FinalVotes()
+	if fv == nil {
+		t.Fatal("FinalVotes() = nil")
+	}
+	fv["m1"] = VoteNo
+	fv["new"] = VoteAbstain
+
+	fv2 := vs.FinalVotes()
+	if fv2["m1"] != VoteYes {
+		t.Errorf("mutating first copy changed session: FinalVotes()[m1] = %v, want Yes", fv2["m1"])
+	}
+	if _, ok := fv2["new"]; ok {
+		t.Error("mutating first copy added key to session FinalVotes")
+	}
+}
