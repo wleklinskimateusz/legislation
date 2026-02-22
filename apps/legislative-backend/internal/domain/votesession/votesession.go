@@ -25,7 +25,7 @@ const (
 	VoteAbstain VoteChoice = "Abstain"
 )
 
-// VotingResult holds the tally and outcome of a closed vote session.
+// VotingResult holds the aggregated tally and outcome of a closed vote session (per-member votes are in FinalVotes).
 type VotingResult struct {
 	YesCount     int
 	NoCount      int
@@ -67,6 +67,7 @@ type VoteSession struct {
 	status         Status
 	eligibleVoters []EligibleVoter
 	votes          map[string]VoteChoice
+	finalVotes     map[string]VoteChoice // immutable snapshot taken at close; never written after CloseWithResult
 	result         *VotingResult
 }
 
@@ -114,6 +115,10 @@ func (vs *VoteSession) CloseWithResult(policy OutcomePolicy) error {
 	}
 	yes, no, abstain := CountVotes(vs.votes)
 	vs.status = StatusClosed
+	vs.finalVotes = make(map[string]VoteChoice, len(vs.votes))
+	for k, v := range vs.votes {
+		vs.finalVotes[k] = v
+	}
 	vs.result = &VotingResult{
 		YesCount:     yes,
 		NoCount:      no,
@@ -123,7 +128,19 @@ func (vs *VoteSession) CloseWithResult(policy OutcomePolicy) error {
 	return nil
 }
 
-// Result returns the voting result after the session has been closed with CloseWithResult; nil otherwise.
+// FinalVotes returns the per-member final votes for a closed session (nil when open). Returns a copy so callers cannot mutate the record.
+func (vs *VoteSession) FinalVotes() map[string]VoteChoice {
+	if vs.finalVotes == nil || vs.status != StatusClosed {
+		return nil
+	}
+	out := make(map[string]VoteChoice, len(vs.finalVotes))
+	for k, v := range vs.finalVotes {
+		out[k] = v
+	}
+	return out
+}
+
+// Result returns the aggregated voting result (YesCount, NoCount, AbstainCount, Passed) after the session has been closed with CloseWithResult; nil otherwise.
 func (vs *VoteSession) Result() *VotingResult {
 	return vs.result
 }
